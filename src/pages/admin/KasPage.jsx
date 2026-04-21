@@ -5,15 +5,15 @@ import Input from '../../components/ui/Input';
 import toast from 'react-hot-toast';
 import { transactionService } from '../../features/finances/services/transactionService';
 import { exportService } from '../../features/exports/services/exportService';
+import { formatRp } from '../../utils/formatting';
+import { formRules, hasErrors, getFirstError } from '../../utils/validation';
 import { Trash2, Plus, ArrowUpCircle, ArrowDownCircle, FileText, Table } from 'lucide-react';
-
-// Utility helper untuk format Rupiah
-const formatRp = (number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number || 0);
 
 export default function KasPage() {
   const [transactions, setTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
 
   // Form State
   const [type, setType] = useState('income');
@@ -28,8 +28,8 @@ export default function KasPage() {
       const data = await transactionService.getAllTransactions();
       setTransactions(data);
     } catch (error) {
-      console.error(error);
-      toast.error('Gagal memuat data kas. Pastikan tabel Supabase siap.');
+      console.error('Error loading transactions:', error);
+      toast.error('Gagal memuat data kas. Pastikan koneksi database sudah terhubung.');
     } finally {
       setIsLoading(false);
     }
@@ -41,66 +41,87 @@ export default function KasPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!amount || !category || !date) {
-      return toast.error("Nominal, Kategori, dan Tanggal wajib diisi!");
+    
+    // Validate form
+    const formData = { amount, category, date, description };
+    const formErrors = formRules.transaction(formData);
+    
+    if (hasErrors(formErrors)) {
+      setErrors(formErrors);
+      toast.error(getFirstError(formErrors));
+      return;
     }
 
     setIsSubmitting(true);
+    setErrors({});
     try {
       await transactionService.addTransaction({
         type,
-        amount: Number(amount.replace(/\D/g, '')), // membersihkan titik koma jika ada
+        amount: Number(amount.replace(/\D/g, '')),
         category,
         description,
         date
       });
-      toast.success("Transaksi berhasil ditambahkan!");
+      toast.success("✓ Transaksi berhasil ditambahkan!");
       
-      // Reset formulir setengahnya (biarkan bulan/kategori jika perlu)
+      // Reset form
       setAmount('');
       setDescription('');
+      setCategory('');
+      setErrors({});
       
       // Refresh Data
-      loadData();
+      await loadData();
     } catch (error) {
-      toast.error("Gagal menambahkan transaksi.");
+      console.error('Error adding transaction:', error);
+      toast.error("Gagal menambahkan transaksi. Coba lagi.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Yakin ingin menghapus data kas ini?")) return;
+    if (!window.confirm("Yakin ingin menghapus transaksi ini?")) return;
     try {
       await transactionService.deleteTransaction(id);
-      toast.success("Berhasil dihapus!");
-      loadData();
-    } catch (e) {
-      toast.error("Gagal menghapus.");
+      toast.success("✓ Transaksi berhasil dihapus!");
+      await loadData();
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      toast.error("Gagal menghapus transaksi.");
     }
   };
 
   const handleExportPDF = () => {
     if (transactions.length === 0) return toast.error("Tidak ada data untuk diekspor");
     
-    // Hitung ringkasan untuk header PDF
-    const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, current) => acc + Number(current.amount), 0);
-    const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, current) => acc + Number(current.amount), 0);
-    const balance = totalIncome - totalExpense;
+    try {
+      const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, current) => acc + Number(current.amount), 0);
+      const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, current) => acc + Number(current.amount), 0);
+      const balance = totalIncome - totalExpense;
 
-    exportService.exportToPDF(transactions, {
-      rtName: 'Warga RT 01', 
-      totalIncome,
-      totalExpense,
-      balance
-    });
-    toast.success("PDF berhasil dibuat!");
+      exportService.exportToPDF(transactions, {
+        rtName: 'Warga RT 01', 
+        totalIncome,
+        totalExpense,
+        balance
+      });
+      toast.success("✓ PDF berhasil dibuat!");
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast.error("Gagal membuat PDF. Coba lagi.");
+    }
   };
 
   const handleExportExcel = () => {
     if (transactions.length === 0) return toast.error("Tidak ada data untuk diekspor");
-    exportService.exportToExcel(transactions);
-    toast.success("Excel berhasil diunduh!");
+    try {
+      exportService.exportToExcel(transactions);
+      toast.success("✓ Excel berhasil diunduh!");
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      toast.error("Gagal mengunduh Excel. Coba lagi.");
+    }
   };
 
   return (
@@ -153,12 +174,17 @@ export default function KasPage() {
                 placeholder="150000"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
+                error={errors.amount}
               />
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Kategori</label>
                 <select 
-                  className="block w-full rounded-md border border-slate-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm"
+                  className={`block w-full rounded-md border py-2 px-3 shadow-sm focus:outline-none focus:ring-1 sm:text-sm transition-colors
+                    ${errors.category 
+                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
+                      : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500'
+                    }`}
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                 >
@@ -181,6 +207,7 @@ export default function KasPage() {
                     </>
                   )}
                 </select>
+                {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
               </div>
 
               <Input 
@@ -188,17 +215,23 @@ export default function KasPage() {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                error={errors.date}
               />
 
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-slate-700">Keterangan Catatan (Opsional)</label>
                 <textarea 
-                  className="block w-full rounded-md border border-slate-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm resize-none"
+                  className={`block w-full rounded-md border py-2 px-3 shadow-sm focus:outline-none focus:ring-1 sm:text-sm resize-none transition-colors
+                    ${errors.description 
+                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
+                      : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500'
+                    }`}
                   rows="3"
                   placeholder="Misal: Iuran bulan April blok B2..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                 />
+                {errors.description && <p className="text-sm text-red-600">{errors.description}</p>}
               </div>
 
               <Button type="submit" className="w-full" isLoading={isSubmitting}>

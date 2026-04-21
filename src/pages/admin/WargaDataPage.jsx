@@ -4,6 +4,7 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import toast from 'react-hot-toast';
 import { wargaService } from '../../features/admin/services/wargaService';
+import { formRules, hasErrors, getFirstError } from '../../utils/validation';
 import { Trash2, UserPlus, Home, UserCheck, Phone } from 'lucide-react';
 
 export default function WargaDataPage() {
@@ -11,6 +12,7 @@ export default function WargaDataPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [errors, setErrors] = useState({});
 
   // Form State
   const [nama, setNama] = useState('');
@@ -25,7 +27,7 @@ export default function WargaDataPage() {
       const data = await wargaService.getAllWarga();
       setWargaList(data);
     } catch (error) {
-      console.error(error);
+      console.error('Error loading warga:', error);
       toast.error('Gagal memuat data warga.');
     } finally {
       setIsLoading(false);
@@ -38,30 +40,41 @@ export default function WargaDataPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!nama || !blok || !nomorRumah) {
-      return toast.error("Nama KK, Blok, dan Nomor Rumah wajib diisi!");
+    
+    // Validate form
+    const formData = { nama, blok, nomorRumah, noHp };
+    const formErrors = formRules.warga(formData);
+    
+    if (hasErrors(formErrors)) {
+      setErrors(formErrors);
+      toast.error(getFirstError(formErrors));
+      return;
     }
 
     setIsSubmitting(true);
+    setErrors({});
     try {
       await wargaService.addWarga({
         nama_kepala_keluarga: nama,
         blok,
         nomor_rumah: nomorRumah,
         status_hunian: statusHunian,
-        no_hp: noHp,
+        no_hp: noHp || null,
       });
-      toast.success("Berhasil menambahkan data warga!");
+      toast.success("✓ Data warga berhasil ditambahkan!");
       
       // Reset & Refresh
       setNama('');
       setBlok('');
       setNomorRumah('');
       setNoHp('');
+      setStatusHunian('Pemilik');
       setShowForm(false);
-      loadData();
+      setErrors({});
+      await loadData();
     } catch (error) {
-      toast.error("Gagal menyimpan data.");
+      console.error('Error adding warga:', error);
+      toast.error("Gagal menyimpan data. Coba lagi.");
     } finally {
       setIsSubmitting(false);
     }
@@ -71,10 +84,11 @@ export default function WargaDataPage() {
     if (!window.confirm(`Yakin ingin menghapus data Keluarga ${nama_kk}?`)) return;
     try {
       await wargaService.deleteWarga(id);
-      toast.success("Data warga dihapus!");
-      loadData();
-    } catch (e) {
-      toast.error("Gagal menghapus.");
+      toast.success("✓ Data warga berhasil dihapus!");
+      await loadData();
+    } catch (error) {
+      console.error('Error deleting warga:', error);
+      toast.error("Gagal menghapus data.");
     }
   };
 
@@ -100,18 +114,21 @@ export default function WargaDataPage() {
                 placeholder="Misal: Budi Santoso"
                 value={nama}
                 onChange={(e) => setNama(e.target.value)}
+                error={errors.nama}
               />
               <Input 
                 label="Blok Rumah *" 
                 placeholder="A / B / Melati"
                 value={blok}
                 onChange={(e) => setBlok(e.target.value)}
+                error={errors.blok}
               />
               <Input 
                 label="Nomor Rumah *" 
                 placeholder="12A"
                 value={nomorRumah}
                 onChange={(e) => setNomorRumah(e.target.value)}
+                error={errors.nomorRumah}
               />
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Status Hunian</label>
@@ -130,6 +147,7 @@ export default function WargaDataPage() {
                 placeholder="08123456789"
                 value={noHp}
                 onChange={(e) => setNoHp(e.target.value)}
+                error={errors.noHp}
               />
               <Button type="submit" isLoading={isSubmitting} className="w-full">
                 Simpan Data

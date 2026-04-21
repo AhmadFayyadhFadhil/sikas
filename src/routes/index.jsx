@@ -7,12 +7,17 @@ import PortalLayout from '../layouts/PortalLayout';
 import ProtectedRoute from './ProtectedRoute';
 import { useAuth } from '../hooks/useAuth';
 
-// Pages
+// Pages - Admin
 import LoginPage from '../pages/auth/LoginPage';
 import DashboardPage from '../pages/admin/DashboardPage';
 import KasPage from '../pages/admin/KasPage';
 import WargaDataPage from '../pages/admin/WargaDataPage';
+import LaporanPage from '../pages/admin/LaporanPage';
+
+// Pages - Portal
 import PortalHomePage from '../pages/warga/PortalHomePage';
+import IuranSayaPage from '../pages/warga/IuranSayaPage';
+import LaporanRTPage from '../pages/warga/LaporanRTPage';
 
 export default function AppRoutes() {
   const { user } = useAuth();
@@ -40,11 +45,14 @@ export default function AppRoutes() {
         <Route index element={<DashboardPage />} />
         <Route path="kas" element={<KasPage />} />
         <Route path="warga" element={<WargaDataPage />} />
+        <Route path="laporan" element={<LaporanPage />} />
       </Route>
 
-      {/* Portal Routes (Public Landing Page) */}
+      {/* Portal Routes (Public Landing Page + Warga Pages) */}
       <Route path="/portal" element={<PortalLayout />}>
         <Route index element={<PortalHomePage />} />
+        <Route path="iuran" element={<IuranSayaPage />} />
+        <Route path="laporan" element={<LaporanRTPage />} />
       </Route>
 
       <Route path="*" element={

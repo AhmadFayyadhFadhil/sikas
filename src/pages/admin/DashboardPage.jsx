@@ -5,8 +5,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import { TrendingUp, TrendingDown, Wallet } from 'lucide-react';
-
-const formatRp = (number) => new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(number || 0);
+import { formatRp, formatDateShort } from '../../utils/formatting';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({ balance: 0, totalIncome: 0, totalExpense: 0 });

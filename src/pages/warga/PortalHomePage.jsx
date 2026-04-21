@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { transactionService } from '../../features/finances/services/transactionService';
+import { formatRp } from '../../utils/formatting';
 import { Wallet, TrendingUp, TrendingDown, ShieldCheck, PieChart, Zap } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
-
-const formatRp = (number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number || 0);
 
 export default function PortalHomePage() {
   const [stats, setStats] = useState({ balance: 0, totalIncome: 0, totalExpense: 0 });
