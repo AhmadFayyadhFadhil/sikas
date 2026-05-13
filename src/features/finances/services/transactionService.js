@@ -48,6 +48,36 @@ export const transactionService = {
     }
   },
 
+  // Update transaksi
+  async updateTransaction(id, payload) {
+    try {
+      if (!id) throw new Error('ID transaksi harus disediakan');
+      if (!payload.type || !payload.amount || !payload.category || !payload.date) {
+        throw new Error('Semua field transaksi harus diisi');
+      }
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .update({
+          type: payload.type,
+          amount: payload.amount,
+          category: payload.category,
+          description: payload.description,
+          date: payload.date
+        })
+        .eq('id', id)
+        .select();
+        
+      if (error) throw new Error(`Supabase Error: ${error.message}`);
+      if (!data || data.length === 0) throw new Error('Data transaksi tidak ditemukan');
+      
+      return data[0];
+    } catch (err) {
+      console.error('updateTransaction error:', err);
+      throw new Error(err.message || 'Gagal memperbarui transaksi');
+    }
+  },
+
   // Hapus transaksi
   async deleteTransaction(id) {
     try {

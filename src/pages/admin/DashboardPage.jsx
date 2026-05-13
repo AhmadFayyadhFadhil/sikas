@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '../../components/ui/Card';
 import { transactionService } from '../../features/finances/services/transactionService';
+import { iuranService } from '../../features/finances/services/iuranService';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import { TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, CreditCard } from 'lucide-react';
 import { formatRp, formatDateShort } from '../../utils/formatting';
+import UnpaidIuranAlert from '../../components/shared/UnpaidIuranAlert';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({ balance: 0, totalIncome: 0, totalExpense: 0 });
+  const [iuranStats, setIuranStats] = useState({});
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -18,6 +21,9 @@ export default function DashboardPage() {
       try {
         const { balance, totalIncome, totalExpense } = await transactionService.getDashboardStats();
         setStats({ balance, totalIncome, totalExpense });
+
+        const iStats = await iuranService.getIuranStats();
+        setIuranStats(iStats);
 
         // Build simple chart data from all transactions just for visual
         const allTxs = await transactionService.getAllTransactions();
@@ -88,6 +94,65 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Iuran Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs text-slate-500 font-medium">Total Iuran</p>
+                <h3 className="text-2xl font-bold text-slate-800 mt-1">{formatRp(iuranStats.totalIuran || 0)}</h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  {(iuranStats.countLunas || 0) + (iuranStats.countBelumLunas || 0)} warga
+                </p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <CreditCard size={20} className="text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-emerald-200 bg-emerald-50/30">
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs text-emerald-700 font-medium">Terkumpul</p>
+                <h3 className="text-2xl font-bold text-emerald-600 mt-1">{formatRp(iuranStats.totalTerkumpul || 0)}</h3>
+                <p className="text-xs text-emerald-600 mt-1">{iuranStats.countLunas || 0} pembayaran</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-amber-200 bg-amber-50/30">
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs text-amber-700 font-medium">Terhutang</p>
+                <h3 className="text-2xl font-bold text-amber-600 mt-1">{formatRp(iuranStats.totalTerhutang || 0)}</h3>
+                <p className="text-xs text-amber-600 mt-1">{iuranStats.countBelumLunas || 0} belum bayar</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-purple-200 bg-purple-50/30">
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs text-purple-700 font-medium">Terkumpul</p>
+                <h3 className="text-2xl font-bold text-purple-600 mt-1">{iuranStats.percentagePaid || 0}%</h3>
+                <p className="text-xs text-purple-600 mt-1">dari target 100%</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Unpaid Iuran Alert */}
+      <UnpaidIuranAlert showCount={5} />
 
       {/* Chart Section */}
       <Card>

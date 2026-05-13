@@ -4,7 +4,7 @@ import { Home, Receipt, FileBarChart, LogOut, Menu, X } from "lucide-react";
 import { useState } from "react";
 
 export default function PortalLayout() {
-  const { logout, user } = useAuth();
+  const { logout, user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -14,11 +14,21 @@ export default function PortalLayout() {
     navigate("/login");
   };
 
+  // Menu yang selalu ditampilkan
   const navLinks = [
-    { name: "Beranda", path: "/portal", icon: Home },
-    { name: "Iuran Saya", path: "/portal/iuran", icon: Receipt },
-    { name: "Laporan RT", path: "/portal/laporan", icon: FileBarChart },
+    { name: "Beranda", path: "/portal", icon: Home, requiresLogin: false },
   ];
+
+  // Tambah menu jika sudah login
+  if (user) {
+    navLinks.push(
+      { name: "Iuran Saya", path: "/portal/iuran", icon: Receipt, requiresLogin: true },
+      { name: "Laporan RT", path: "/portal/laporan", icon: FileBarChart, requiresLogin: true }
+    );
+  }
+
+  // Menu untuk navigasi (hanya yang tidak perlu login khusus)
+  const visibleNavLinks = navLinks.filter(link => !link.requiresLogin || user);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -36,7 +46,7 @@ export default function PortalLayout() {
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex space-x-8 h-full">
-              {navLinks.map((link) => {
+              {visibleNavLinks.map((link) => {
                 const isActive = location.pathname === link.path;
                 return (
                   <Link
@@ -59,12 +69,14 @@ export default function PortalLayout() {
             <div className="hidden md:flex items-center gap-4">
               {user ? (
                 <>
-                  <Link
-                    to="/admin"
-                    className="inline-flex items-center gap-2 text-sm font-medium text-white bg-slate-800 hover:bg-slate-900 px-4 py-2 rounded-lg transition-colors shadow-sm"
-                  >
-                    Dashboard Admin
-                  </Link>
+                  {isAdmin && (
+                    <Link
+                      to="/admin"
+                      className="inline-flex items-center gap-2 text-sm font-medium text-white bg-slate-800 hover:bg-slate-900 px-4 py-2 rounded-lg transition-colors shadow-sm"
+                    >
+                      Dashboard Admin
+                    </Link>
+                  )}
                   <button 
                     onClick={handleLogout}
                     className="inline-flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
@@ -78,7 +90,7 @@ export default function PortalLayout() {
                   to="/login"
                   className="inline-flex items-center gap-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors shadow-sm"
                 >
-                  Login Pengurus
+                  Login
                 </Link>
               )}
             </div>
@@ -99,7 +111,7 @@ export default function PortalLayout() {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-slate-100 bg-white shadow-lg absolute w-full">
             <div className="pt-2 pb-3 space-y-1">
-              {navLinks.map((link) => {
+              {visibleNavLinks.map((link) => {
                 const isActive = location.pathname === link.path;
                 return (
                   <Link
@@ -131,16 +143,20 @@ export default function PortalLayout() {
                     </div>
                     <div className="ml-3">
                       <div className="text-base font-medium text-slate-800">{user?.email}</div>
-                      <div className="text-sm font-medium text-slate-500">Warga RT 01</div>
+                      <div className="text-sm font-medium text-slate-500">
+                        {isAdmin ? 'Pengurus RT' : 'Warga RT 01'}
+                      </div>
                     </div>
                   </div>
-                  <Link
-                    to="/admin"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-slate-800 text-white rounded-lg font-medium"
-                  >
-                    Dashboard Admin
-                  </Link>
+                  {isAdmin && (
+                    <Link
+                      to="/admin"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-slate-800 text-white rounded-lg font-medium"
+                    >
+                      Dashboard Admin
+                    </Link>
+                  )}
                   <button
                     onClick={handleLogout}
                     className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-red-50 text-red-600 rounded-lg font-medium"
@@ -156,7 +172,7 @@ export default function PortalLayout() {
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-medium"
                   >
-                    Login Pengurus
+                    Login
                   </Link>
                 </div>
               )}

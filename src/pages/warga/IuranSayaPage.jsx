@@ -3,60 +3,42 @@ import { Card, CardHeader, CardContent } from '../../components/ui/Card';
 import { formatRp, formatDate } from '../../utils/formatting';
 import { AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../hooks/useAuth';
+import { iuranService } from '../../features/finances/services/iuranService';
+import UnpaidIuranAlert from '../../components/shared/UnpaidIuranAlert';
 
 export default function IuranSayaPage() {
+  const { user } = useAuth();
   const [iuranData, setIuranData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, lunas: 0, belumLunas: 0 });
 
   useEffect(() => {
-    // Simulate loading iuran data
-    // In a real app, this would fetch from an API
-    setTimeout(() => {
-      const mockData = [
-        {
-          id: 1,
-          bulan: 'Januari 2024',
-          nominal: 150000,
-          status: 'Lunas',
-          tanggalBayar: '2024-01-05',
-          buktiPembayaran: 'TRF-20240105-001'
-        },
-        {
-          id: 2,
-          bulan: 'Februari 2024',
-          nominal: 150000,
-          status: 'Lunas',
-          tanggalBayar: '2024-02-03',
-          buktiPembayaran: 'TRF-20240203-001'
-        },
-        {
-          id: 3,
-          bulan: 'Maret 2024',
-          nominal: 150000,
-          status: 'Belum Lunas',
-          tanggalBayar: null,
-          buktiPembayaran: null
-        },
-        {
-          id: 4,
-          bulan: 'April 2024',
-          nominal: 150000,
-          status: 'Belum Lunas',
-          tanggalBayar: null,
-          buktiPembayaran: null
-        }
-      ];
-      
-      setIuranData(mockData);
-      setStats({
-        total: mockData.length,
-        lunas: mockData.filter(i => i.status === 'Lunas').length,
-        belumLunas: mockData.filter(i => i.status === 'Belum Lunas').length
-      });
-      setIsLoading(false);
-    }, 500);
-  }, []);
+    const loadIuran = async () => {
+      if (!user?.id) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const data = await iuranService.getIuranByWarga(user.id);
+        setIuranData(data);
+        setStats({
+          total: data.length,
+          lunas: data.filter(i => i.status === 'Lunas').length,
+          belumLunas: data.filter(i => i.status === 'Belum Lunas').length
+        });
+      } catch (error) {
+        console.error('Error loading iuran:', error);
+        toast.error('Gagal memuat data iuran. Hubungi admin jika masalah berlanjut.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadIuran();
+  }, [user]);
 
   const getStatusBadge = (status) => {
     if (status === 'Lunas') {
@@ -81,6 +63,9 @@ export default function IuranSayaPage() {
         <h2 className="text-2xl font-bold text-slate-800">Riwayat Iuran Saya</h2>
         <p className="text-slate-500 text-sm mt-1">Pantau status pembayaran iuran bulanan Anda.</p>
       </div>
+
+      {/* Unpaid Iuran Alert */}
+      <UnpaidIuranAlert userId={user?.id} showCount={3} />
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -145,12 +130,12 @@ export default function IuranSayaPage() {
                     <td className="py-4 px-6 text-sm font-bold text-slate-800">{formatRp(item.nominal)}</td>
                     <td className="py-4 px-6">{getStatusBadge(item.status)}</td>
                     <td className="py-4 px-6 text-sm text-slate-600">
-                      {item.tanggalBayar ? formatDate(item.tanggalBayar) : '-'}
+                      {item.tanggal_bayar ? formatDate(item.tanggal_bayar) : '-'}
                     </td>
                     <td className="py-4 px-6 text-sm">
-                      {item.buktiPembayaran ? (
+                      {item.bukti_pembayaran ? (
                         <span className="px-2.5 py-1.5 bg-blue-50 text-blue-700 rounded text-xs font-medium border border-blue-200">
-                          {item.buktiPembayaran}
+                          {item.bukti_pembayaran}
                         </span>
                       ) : (
                         <span className="text-slate-400">-</span>

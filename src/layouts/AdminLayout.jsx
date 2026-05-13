@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { LayoutDashboard, Users, Wallet, FileText, LogOut, Menu } from "lucide-react";
+import { LayoutDashboard, Users, Wallet, FileText, LogOut, Menu, CreditCard } from "lucide-react";
 import { useState } from "react";
 
 export default function AdminLayout() {
@@ -17,6 +17,7 @@ export default function AdminLayout() {
   const navLinks = [
     { name: "Dashboard", path: "/admin", icon: LayoutDashboard },
     { name: "Data Warga", path: "/admin/warga", icon: Users },
+    { name: "Manajemen Iuran", path: "/admin/iuran", icon: CreditCard },
     { name: "Kas RT", path: "/admin/kas", icon: Wallet },
     { name: "Laporan", path: "/admin/laporan", icon: FileText },
   ];
@@ -61,6 +62,12 @@ export default function AdminLayout() {
         </nav>
 
         <div className="p-4 border-t border-slate-800">
+          <Link
+            to="/portal"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition-colors font-medium mb-2"
+          >
+            Kembali ke Portal
+          </Link>
           <button 
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors font-medium"
